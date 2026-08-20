@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Raspadinha Aquarela Tintas</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;background:linear-gradient(135deg,#f4f7fb,#dfeaf7)}
+.card{width:min(94vw,560px);background:#fff;border-radius:28px;padding:28px;text-align:center;box-shadow:0 18px 55px #0002}
+.logo{font-size:28px;font-weight:900;color:#1565c0}.logo span{color:#f2c400}h1{margin:8px 0;font-size:29px}.sub{color:#5c6670;line-height:1.4}.rule{display:inline-block;background:#eaf3ff;color:#12549d;padding:9px 14px;border-radius:999px;font-weight:bold;font-size:14px}
+.ticket{position:relative;width:min(88vw,420px);height:250px;margin:24px auto;border-radius:20px;overflow:hidden;background:linear-gradient(135deg,#fff,#eaf4ff);border:4px solid #1565c0;box-shadow:inset 0 0 0 5px #fff}
+.ticket .hidden{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:1}
+.prize{font-size:48px;font-weight:900;color:#1565c0}.prize small{display:block;font-size:18px;color:#333;margin-top:8px}
+canvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;touch-action:none;cursor:crosshair}
+.instruction{font-weight:800;color:#333;margin:8px}.progress{font-size:13px;color:#777}
+button{border:0;border-radius:14px;padding:15px 28px;font-size:17px;font-weight:900;background:#1565c0;color:#fff;cursor:pointer;box-shadow:0 7px 16px #1565c04d}
+button:disabled{opacity:.55;cursor:not-allowed}#result{min-height:55px;margin-top:16px;font-size:19px;font-weight:800}.discount{font-size:30px;color:#1565c0}.locked{display:none;margin-top:14px;padding:13px;border-radius:13px;background:#fff4e5;color:#805000;font-weight:bold}
+.small{font-size:12px;color:#7b838b;margin-top:13px}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="logo">Aquarela <span>Tintas</span></div>
+<h1>🎁 RASPADINHA DE PRÊMIOS</h1>
+<p class="sub">Raspe a área azul e descubra seu desconto especial!</p>
+<div class="rule">Compras a partir de R$ 300,00 • 1 tentativa</div>
+<div class="ticket">
+  <div class="hidden"><div>SEU PRÊMIO É</div><div id="prize" class="prize"></div><small>Obrigado por participar! 🎨</small></div>
+  <canvas id="scratch"></canvas>
+</div>
+<div class="instruction">👆 Raspe com o dedo ou mouse</div>
+<div class="progress" id="progress">Continue raspando para revelar seu prêmio.</div>
+<button id="start">RASPAR AGORA</button>
+<div id="result"></div>
+<div id="locked" class="locked">🔒 Você já utilizou sua tentativa.</div>
+<div class="small">Desconto válido conforme as regras comerciais da Aquarela Tintas.</div>
+</div>
+<script>
+const canvas=document.getElementById('scratch'),ctx=canvas.getContext('2d');
+const prizeEl=document.getElementById('prize'),progress=document.getElementById('progress'),btn=document.getElementById('start'),result=document.getElementById('result'),locked=document.getElementById('locked');
+const prizes=['1%','2%','3%','4%','5%','6%','7%','8%','9%','10%'];
+let drawing=false,started=false,used=localStorage.getItem('aquarela_raspadinha_usada')==='1',scratched=0;
+function resize(){
+ const rect=canvas.getBoundingClientRect(),d=devicePixelRatio||1;canvas.width=rect.width*d;canvas.height=rect.height*d;ctx.setTransform(d,0,0,d,0,0);
+ ctx.fillStyle='#1591e8';ctx.fillRect(0,0,rect.width,rect.height);
+ // decorative pattern
+ ctx.fillStyle='#0b78c9';for(let i=0;i<80;i++){ctx.beginPath();ctx.arc(Math.random()*rect.width,Math.random()*rect.height,Math.random()*9+3,0,Math.PI*2);ctx.fill()}
+ ctx.fillStyle='#fff';ctx.font='900 25px Arial';ctx.textAlign='center';ctx.fillText('RASPE AQUI 🎁',rect.width/2,rect.height/2);
+}
+function point(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
+function scratch(e){
+ if(!started||used)return; e.preventDefault();const p=point(e);ctx.globalCompositeOperation='destination-out';ctx.beginPath();ctx.arc(p.x,p.y,24,0,Math.PI*2);ctx.fill();ctx.globalCompositeOperation='source-over';scratched++;if(scratched%10===0)checkReveal();
+}
+function checkReveal(){
+ const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;let clear=0;
+ for(let i=3;i<data.length;i+=32)if(data[i]<80)clear++;
+ const pct=clear/(data.length/32)*100;progress.textContent='Área revelada: '+Math.min(100,Math.round(pct))+'%';
+ if(pct>48) reveal();
+}
+function reveal(){
+ if(used)return; used=true;localStorage.setItem('aquarela_raspadinha_usada','1');btn.disabled=true;locked.style.display='block';
+ canvas.style.display='none';result.innerHTML='🎉 Você ganhou <span class="discount">'+prizeEl.textContent+'</span> de desconto!<br><small>Apresente este resultado na compra.</small>';
+}
+function start(){
+ if(used)return;started=true;btn.disabled=true;resize();prizeEl.textContent=prizes[Math.floor(Math.random()*prizes.length)];
+}
+if(used){btn.disabled=true;locked.style.display='block';result.textContent='Esta raspadinha já foi utilizada neste navegador. 🔒'}
+btn.addEventListener('click',start);canvas.addEventListener('pointerdown',e=>{drawing=true;scratch(e)});canvas.addEventListener('pointermove',e=>{if(drawing)scratch(e)});window.addEventListener('pointerup',()=>drawing=false);
+window.addEventListener('resize',()=>{if(started&&!used)resize()});
+resize();
+</script>
+</body></html>
